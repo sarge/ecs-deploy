@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/travisjeffery/ecs-deploy/client"
+	"github.com/gametimesf/ecs-deploy/client"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -23,7 +23,7 @@ var (
 )
 
 func main() {
-	kingpin.UsageTemplate(kingpin.CompactUsageTemplate).Version(VERSION).Author("Travis Jeffery")
+	kingpin.UsageTemplate(kingpin.CompactUsageTemplate).Version(VERSION)
 	kingpin.CommandLine.Help = "Update ECS service."
 	kingpin.Parse()
 
