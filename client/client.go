@@ -29,10 +29,12 @@ func New(region *string, logger *log.Logger) *Client {
 
 // RegisterTaskDefinition updates the existing task definition's image.
 func (c *Client) RegisterTaskDefinition(task, image, tag *string) (string, error) {
-	defs, err := c.GetContainerDefinitions(task)
+	taskDef, err := c.GetTaskDefinition(task)
 	if err != nil {
 		return "", err
 	}
+
+	defs := taskDef.ContainerDefinitions
 	for _, d := range defs {
 		if strings.HasPrefix(*d.Image, *image) {
 			i := fmt.Sprintf("%s:%s", *image, *tag)
@@ -41,7 +43,11 @@ func (c *Client) RegisterTaskDefinition(task, image, tag *string) (string, error
 	}
 	input := &ecs.RegisterTaskDefinitionInput{
 		Family:               task,
+		TaskRoleArn:          taskDef.TaskRoleArn,
+		NetworkMode:          taskDef.NetworkMode,
 		ContainerDefinitions: defs,
+		Volumes:              taskDef.Volumes,
+		PlacementConstraints: taskDef.PlacementConstraints,
 	}
 	resp, err := c.svc.RegisterTaskDefinition(input)
 	if err != nil {
@@ -103,13 +109,13 @@ func (c *Client) GetDeployment(cluster, service, arn *string) (*ecs.Deployment, 
 	return nil, nil
 }
 
-// GetContainerDefinitions get container definitions of the service.
-func (c *Client) GetContainerDefinitions(task *string) ([]*ecs.ContainerDefinition, error) {
+// GetTaskDefinition gets the latest revision for the given task definition
+func (c *Client) GetTaskDefinition(task *string) (*ecs.TaskDefinition, error) {
 	output, err := c.svc.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
 		TaskDefinition: task,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return output.TaskDefinition.ContainerDefinitions, nil
+	return output.TaskDefinition, nil
 }

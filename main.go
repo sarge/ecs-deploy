@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/travisjeffery/ecs-deploy/client"
+	"github.com/gametimesf/ecs-deploy/client"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -23,7 +23,7 @@ var (
 )
 
 func main() {
-	kingpin.UsageTemplate(kingpin.CompactUsageTemplate).Version(VERSION).Author("Travis Jeffery")
+	kingpin.UsageTemplate(kingpin.CompactUsageTemplate).Version(VERSION)
 	kingpin.CommandLine.Help = "Update ECS service."
 	kingpin.Parse()
 
@@ -42,23 +42,24 @@ func main() {
 		arn, err = c.RegisterTaskDefinition(task, image, tag)
 		if err != nil {
 			logger.Printf("[error] register task definition: %s\n", err)
-			return
+			os.Exit(1)
 		}
 	}
 
 	err = c.UpdateService(cluster, service, count, &arn)
 	if err != nil {
 		logger.Printf("[error] update service: %s\n", err)
-		return
+		os.Exit(1)
 	}
 
 	if *nowait == false {
 		err := c.Wait(cluster, service, &arn)
 		if err != nil {
 			logger.Printf("[error] wait: %s\n", err)
-			return
+			os.Exit(1)
 		}
 	}
 
 	logger.Printf("[info] update service success")
+	os.Exit(0)
 }
