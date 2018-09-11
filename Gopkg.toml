@@ -26,5 +26,5 @@
   version = "1.10.41"
 
 [[constraint]]
-  name = "gopkg.in/alecthomas/kingpin.v2"
+  name = "github.com/alecthomas/kingpin"
   version = "2.2.5"
