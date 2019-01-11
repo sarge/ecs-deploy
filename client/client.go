@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
@@ -17,9 +18,39 @@ type Client struct {
 	pollInterval time.Duration
 }
 
-func New(region *string, logger *log.Logger) *Client {
-	sess := session.New(&aws.Config{Region: region})
-	svc := ecs.New(sess)
+func New(region *string, profile *string, roleArn *string, logger *log.Logger) *Client {
+
+	var sess *session.Session
+
+	config := &aws.Config{
+		Region: region,
+	}
+
+	if *profile != "" {
+		sess = session.Must(session.NewSessionWithOptions(
+			session.Options{
+				SharedConfigState: session.SharedConfigEnable,
+				Profile:           *profile,
+			},
+		))
+		logger.Printf("adding profile: %s", *profile)
+
+	} else {
+		sess = session.New(config)
+	}
+
+	if *roleArn != "" {
+		creds := stscreds.NewCredentials(sess, *roleArn)
+
+		config = &aws.Config{
+			Credentials: creds,
+			Region:      region,
+		}
+		logger.Printf("assuming role: %s", *roleArn)
+	}
+
+	svc := ecs.New(sess, config)
+
 	return &Client{
 		svc:          svc,
 		pollInterval: time.Second * 5,

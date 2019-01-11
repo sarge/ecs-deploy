@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/gametimesf/ecs-deploy/client"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/sarge/ecs-deploy/client"
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
@@ -18,6 +18,9 @@ var (
 	region  = kingpin.Flag("region", "Name of AWS region.").Default("us-east-1").OverrideDefaultFromEnvar("AWS_DEFAULT_REGION").String()
 	count   = kingpin.Flag("count", "Desired count of instantiations to place and run in service. Defaults to existing running count.").Default("-1").Int64()
 	nowait  = kingpin.Flag("nowait", "Disable waiting for all task definitions to start running").Bool()
+	profile = kingpin.Flag("profile", "AWS Profile to Use.").Default("").String()
+	roleArn = kingpin.Flag("assume", "AWS Role to assume.").Default("").String()
+
 	// VERSION is set via ldflag
 	VERSION = "0.0.0"
 )
@@ -33,7 +36,7 @@ func main() {
 
 	prefix := fmt.Sprintf("%s/%s ", *cluster, *service)
 	logger := log.New(os.Stderr, prefix, log.LstdFlags)
-	c := client.New(region, logger)
+	c := client.New(region, profile, roleArn, logger)
 
 	arn := ""
 	var err error
