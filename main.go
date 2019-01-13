@@ -20,6 +20,7 @@ var (
 	nowait  = kingpin.Flag("nowait", "Disable waiting for all task definitions to start running").Bool()
 	profile = kingpin.Flag("profile", "AWS Profile to Use.").Default("").String()
 	roleArn = kingpin.Flag("assume", "AWS Role to assume.").Default("").String()
+	env     = kingpin.Flag("env", "Environment variables to apply to the task definition").StringMap()
 
 	// VERSION is set via ldflag
 	VERSION = "0.0.0"
@@ -41,12 +42,10 @@ func main() {
 	arn := ""
 	var err error
 
-	if image != nil {
-		arn, err = c.RegisterTaskDefinition(task, image, tag)
-		if err != nil {
-			logger.Printf("[error] register task definition: %s\n", err)
-			os.Exit(1)
-		}
+	arn, err = c.RegisterTaskDefinition(task, image, tag, env)
+	if err != nil {
+		logger.Printf("[error] register task definition: %s\n", err)
+		os.Exit(1)
 	}
 
 	err = c.UpdateService(cluster, service, count, &arn)

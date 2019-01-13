@@ -12,12 +12,14 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
+// Client collects the ecs service and logger
 type Client struct {
 	svc          *ecs.ECS
 	logger       *log.Logger
 	pollInterval time.Duration
 }
 
+// New creates a new client
 func New(region *string, profile *string, roleArn *string, logger *log.Logger) *Client {
 
 	var sess *session.Session
@@ -59,7 +61,7 @@ func New(region *string, profile *string, roleArn *string, logger *log.Logger) *
 }
 
 // RegisterTaskDefinition updates the existing task definition's image.
-func (c *Client) RegisterTaskDefinition(task, image, tag *string) (string, error) {
+func (c *Client) RegisterTaskDefinition(task, image, tag *string, env *map[string]string) (string, error) {
 	taskDef, err := c.GetTaskDefinition(task)
 	if err != nil {
 		return "", err
@@ -67,11 +69,17 @@ func (c *Client) RegisterTaskDefinition(task, image, tag *string) (string, error
 
 	defs := taskDef.ContainerDefinitions
 	for _, d := range defs {
-		if strings.HasPrefix(*d.Image, *image) {
+
+		// update the image definition
+		if *image != "" && strings.HasPrefix(*d.Image, *image) {
+			c.logger.Printf("Updating image to : %s", *image)
 			i := fmt.Sprintf("%s:%s", *image, *tag)
 			d.Image = &i
 		}
+
+		c.merge(d, env)
 	}
+
 	input := &ecs.RegisterTaskDefinitionInput{
 		Family:               task,
 		TaskRoleArn:          taskDef.TaskRoleArn,
@@ -84,7 +92,38 @@ func (c *Client) RegisterTaskDefinition(task, image, tag *string) (string, error
 	if err != nil {
 		return "", err
 	}
+
+	c.logger.Printf("Registered task %s", resp.TaskDefinition)
+
 	return *resp.TaskDefinition.TaskDefinitionArn, nil
+}
+
+func (c *Client) merge(containerDefinition *ecs.ContainerDefinition, env *map[string]string) {
+
+	// update the environment variables
+	for k, v := range *env {
+		found := false
+
+		for _, mv := range containerDefinition.Environment {
+			if *mv.Name == k {
+				c.logger.Printf("Updating env: %s", k)
+				found = true
+				mv.SetValue(v)
+			}
+		}
+
+		if !found {
+			c.logger.Printf("Adding env: %s", k)
+
+			kk := k
+			vv := v
+
+			containerDefinition.Environment = append(containerDefinition.Environment, &ecs.KeyValuePair{
+				Name:  &kk,
+				Value: &vv,
+			})
+		}
+	}
 }
 
 // UpdateService updates the service to use the new task definition.
