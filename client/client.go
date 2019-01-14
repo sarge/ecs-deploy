@@ -35,7 +35,7 @@ func New(region *string, profile *string, roleArn *string, logger *log.Logger) *
 				Profile:           *profile,
 			},
 		))
-		logger.Printf("adding profile: %s", *profile)
+		logger.Printf("[info] --> adding profile: %s", *profile)
 
 	} else {
 		sess = session.New(config)
@@ -48,7 +48,7 @@ func New(region *string, profile *string, roleArn *string, logger *log.Logger) *
 			Credentials: creds,
 			Region:      region,
 		}
-		logger.Printf("assuming role: %s", *roleArn)
+		logger.Printf("[info] --> assuming role: %s", *roleArn)
 	}
 
 	svc := ecs.New(sess, config)
@@ -72,7 +72,7 @@ func (c *Client) RegisterTaskDefinition(task, image, tag *string, env *map[strin
 
 		// update the image definition
 		if *image != "" && strings.HasPrefix(*d.Image, *image) {
-			c.logger.Printf("Updating image to : %s", *image)
+			c.logger.Printf("[info] --> updating image to : %s", *image)
 			i := fmt.Sprintf("%s:%s", *image, *tag)
 			d.Image = &i
 		}
@@ -93,8 +93,6 @@ func (c *Client) RegisterTaskDefinition(task, image, tag *string, env *map[strin
 		return "", err
 	}
 
-	c.logger.Printf("Registered task %s", resp.TaskDefinition)
-
 	return *resp.TaskDefinition.TaskDefinitionArn, nil
 }
 
@@ -106,14 +104,14 @@ func (c *Client) merge(containerDefinition *ecs.ContainerDefinition, env *map[st
 
 		for _, mv := range containerDefinition.Environment {
 			if *mv.Name == k {
-				c.logger.Printf("Updating env: %s", k)
+				c.logger.Printf("[info] --> updating env: %s", k)
 				found = true
 				mv.SetValue(v)
 			}
 		}
 
 		if !found {
-			c.logger.Printf("Adding env: %s", k)
+			c.logger.Printf("[info] --> adding env: %s", k)
 
 			kk := k
 			vv := v
